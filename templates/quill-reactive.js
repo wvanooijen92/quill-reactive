@@ -1,3 +1,4 @@
+
 if(typeof QuillDrafts === "undefined") {
   // Persistent ReactiveDict makes drafts save over page reloads.
   // However, two tabs in the same browser will be sharing the same data!
@@ -5,15 +6,20 @@ if(typeof QuillDrafts === "undefined") {
 }
 
 textChangesListener = function(delta, source) {
+  console.log(delta);
+  console.log(source);
+
   if (source === 'user') {
     var oldDelta = new Delta(_.extend({}, this.tmpl.quillEditor.oldDelta));
     this.tmpl.quillEditor.oldDelta = this.tmpl.quillEditor.oldDelta.compose(delta);
     var opts = this.tmpl.data;
     var collection = Mongo.Collection.get(opts.collection);
     var doc = collection.findOne({_id: opts.docId});
+
     // Check for other new content besides the last keystroke
     var editorContents = this.tmpl.quillEditor.getContents();
     if(oldDelta.compose(delta).diff(editorContents).ops.length > 0) {
+      console.log('ja');
       updateDelta = oldDelta.diff(editorContents);
     } else {
       updateDelta = delta;
@@ -28,8 +34,10 @@ Template.quillReactive.onCreated(function() {
 });
 
 Template.quillReactive.onRendered(function() {
+
   var tmpl = this;
   // var authorId = Meteor.user().username;
+  console.log(Quill);
   tmpl.quillEditor = new Quill('#editor-' + tmpl.data.docId, {
     modules: {
       'authorship': {
@@ -39,7 +47,10 @@ Template.quillReactive.onRendered(function() {
       'toolbar': {
         container: '#toolbar'
       },
-      'link-tooltip': true
+      'link-tooltip': true,
+      'image-tooltip' : true,
+      'video-tooltip' : true,
+      'formula-tooltip' : true
     },
     theme: 'snow'
   });
@@ -61,11 +72,12 @@ Template.quillReactive.onRendered(function() {
       $('.ql-tooltip.ql-link-tooltip:not(.editing)').css('left', '-10000px');
     }
   });
+
   var authorship = tmpl.quillEditor.getModule('authorship');
   var fieldDelta = tmpl.data.field + "Delta";
   var collection = Mongo.Collection.get(tmpl.data.collection);
+  var blankObj = {};
 
-  var blankObj = {}
   blankObj[tmpl.data.field] = "";
   blankObj[tmpl.data.fieldDelta] = new Delta();
 
@@ -83,10 +95,23 @@ Template.quillReactive.onRendered(function() {
     var remoteContents = doc[fieldDelta];
     if(!remoteContents) {
       remoteContents = new Delta();
+    }else{
+      remoteContents = new Delta(remoteContents);
     }
-    var oldContents = tmpl.quillEditor.oldDelta
+
+    /*
+    * Notes for Joe:
+    *
+    * */
+
+    console.log(doc);
+    console.log(remoteContents);
+    console.log(tmpl.quillEditor.oldDelta);
+
+    var oldContents = tmpl.quillEditor.oldDelta;
     var remoteChanges = oldContents.diff(remoteContents);
     var editorContents = tmpl.quillEditor.getContents();
+    // console.log(editorContents, remoteChanges, oldContents)
     var diff = editorContents.diff(remoteContents);
     var localChanges = oldContents.diff(editorContents);
 
